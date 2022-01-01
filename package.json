@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "sleep-promise": "^9.1.0",
+    "steam-totp": "^2.1.1",
+    "steam-user": "^4.20.2"
+  },
+  "name": "steamauto",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
