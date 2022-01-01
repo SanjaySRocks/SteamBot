@@ -52,7 +52,7 @@ client.on('friendsList', async function () {
             count++;
 
             // Test send to friend
-            if(key == "76561197989250411"){
+            // if(key == "76561197989250411"){
 
             client.getPersonas([key], function (err, data) { 
 
@@ -76,7 +76,7 @@ client.on('friendsList', async function () {
             // Delay of 2 sec minimum
             await sleep(2000);
 
-        }
+        // }
 
         }
     }
