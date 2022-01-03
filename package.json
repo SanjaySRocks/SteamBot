@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "colors": "^1.4.0",
     "sleep-promise": "^9.1.0",
     "steam-totp": "^2.1.1",
     "steam-user": "^4.20.2"

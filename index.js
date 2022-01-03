@@ -1,7 +1,8 @@
 const SteamUser = require('steam-user');
-const SteamTotp = require('steam-totp');
+// const SteamTotp = require('steam-totp');
 var sleep = require('sleep-promise');
 var config = require('./configs.json');
+var colors = require('colors');
 
 var client = new SteamUser();
 
@@ -37,7 +38,7 @@ client.on('friendsList', async function () {
         2 - Send Group Invite
     */
 
-    mode = 1;
+    mode = 0;
     
     var msgTxt = `
     This is automated text
@@ -52,23 +53,27 @@ client.on('friendsList', async function () {
             count++;
 
             // Test send to friend
-            // if(key == "76561197989250411"){
+            // if(key == "76561197966732941"){
 
             client.getPersonas([key], function (err, data) { 
+            friend_name = data[key].player_name ? data[key].player_name : ""
+            friend_id = key
 
             switch(mode)
             {
                 // Send Message
                 case 1: 
-                    console.log("[Steam Bot] #"+count+"/"+total_friends+" Friend Name: "+data[key].player_name+" ID: "+key)
+                    console.log(`[Steam Bot] #${count}/${total_friends} Friend Name: ${friend_name} ID: ${friend_id}`)
                     client.chatMessage(key, msgTxt);
                     break;
                 // Send Group Invite
                 case 2:
                     console.log("[Steam Bot] Sending Group Invite")
-                    console.log("[Steam Bot] #"+count+" Friend Name: "+data[key].player_name+" ID: "+key)
+                    console.log(`[Steam Bot] #${count}/${total_friends} Friend Name: ${friend_name} ID: ${friend_id}`)
                     client.inviteToGroup(key, config.groupid);
                     break;
+
+                default: break;
             }
 
             });
@@ -85,4 +90,6 @@ client.on('friendsList', async function () {
 
 client.on('friendMessage', function (steamID, message) {
     console.log("Friend message from " + steamID.getSteam3RenderedID() + ": " + message);
+    if(message.toLowerCase() == "hi")
+        client.chatMessage(steamID, "hi boi this is auto reply bot.")
 });
