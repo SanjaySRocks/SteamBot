@@ -7,7 +7,10 @@ It supports:-
 * Game Hour boosting (Unlimited games can be added)
 * Send Message to all steam friends.
 * Send Group Invite to all steam friends.
-* More Coming Soon.
+* Auto Friend Request Accept
+* Auto Send Group Invite on becoming friends.
+* Remove vac ids from your friend list
+
 
 ## Deployment
 

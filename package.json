@@ -1,9 +1,12 @@
 {
   "dependencies": {
+    "axios": "^0.24.0",
     "colors": "^1.4.0",
+    "prompt": "^1.2.1",
     "sleep-promise": "^9.1.0",
     "steam-totp": "^2.1.1",
-    "steam-user": "^4.20.2"
+    "steam-user": "^4.20.2",
+    "steamcommunity": "^3.43.1"
   },
   "name": "steamauto",
   "version": "1.0.0",

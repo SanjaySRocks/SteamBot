@@ -1,0 +1,3 @@
+Hi $name :steamhappy:
+
+Ignore, this is auto message sent by bot.
