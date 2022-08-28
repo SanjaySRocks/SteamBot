@@ -1,149 +1,49 @@
 const SteamUser = require('steam-user');
-const SteamCommunity = require('steamcommunity');
-const sleep = require('sleep-promise');
-const config = require('./configs.json');
-const colors = require('colors');
-const fs = require('fs')
+// const SteamCommunity = require('steamcommunity');
 const axios = require('axios')
+const path = require('path')
+const fs = require('fs')
 
+const config = require('./configs.json');
 
 var client = new SteamUser();
-var community = new SteamCommunity();
-var SteamID = SteamCommunity.SteamID;
+// var community = new SteamCommunity();
+// var SteamID = SteamCommunity.SteamID;
 
-var ad_file;
-var friends = [];
+let folder_data = "data"
 
-fs.readFile("ad.txt", 'utf8', function(err, data) {
-    if (err)
-        return console.log(err);
-
-    ad_file = data;
-});
-
+let friends = [];
 
 client.logOn({
-	accountName: config.username,
-	password: config.password,
-    rememberPassword: true,
-    autoRelogin: true
+    accountName: config.username,
+    password: config.password,
+    twoFactorCode: '542by',
+    rememberPassword: true
 });
 
-client.on('loggedOn', function(details) {
-	console.log("[Steam Bot] Logged into Steam as " + client.steamID.getSteam3RenderedID());
-	client.setPersona(SteamUser.EPersonaState.Invisible);
+client.on('loggedOn', function (details) {
+    console.log("[Steam Bot] Logged into Steam as " + client.steamID.getSteam3RenderedID());
+    client.setPersona(SteamUser.EPersonaState.Invisible);
 
     // Games to idle 
-	client.gamesPlayed(config.games);
+    client.gamesPlayed(config.games);
 });
 
-client.on('error', function(e) {
-	console.log("Error: "+e);
+client.on('error', function (e) {
+    console.log("Error: " + e);
 });
 
-client.on('webSession', function(sessionID, cookies) {
-	// console.log("[Steam Bot] Got web session");
+client.on('webSession', function (sessionID, cookies) {
+    // console.log("[Steam Bot] Got web session");
 });
 
-client.on('friendsList', function () {
-    
+client.on('friendsList', async function () {
+
     friends = Object.keys(client.myFriends).filter(steamId => client.myFriends[steamId] == SteamUser.EFriendRelationship.Friend);
 
-    console.log('All Friends: ' + friends.length);
+    await DumpFriends(friends);
+    console.log('Total Number of Friends: ' + friends.length);
 
-    // execSend(friend_mode=2, game_id=730, mode=2);
-    checkVacID(removeFriend=true);
-
-});
-
-// Thanks Snabe for this code.
-client.on('friendRelationship', (steamID, relationship) => {
-    switch(relationship) {
-        case 2:
-            console.log(`[Steam Bot] ${client.steamID.getSteamID64()} received a friend request from user ${steamID}.`);
-        
-            client.addFriend(steamID, (err) => {
-                if(err) {
-                    console.log(`Error adding user ${steamID}.`);
-                } else {
-                    client.getPersonas([steamID], (err, personas) => {
-                        var persona = personas[steamID.getSteamID64()];
-                        var name = persona ? persona.player_name : ("[" + steamID.getSteamID64() + "]");
-                        client.chatMessage(steamID, `Greetings ${name}! thanks for adding me :')`);
-                    });
-                    console.log(`[Steam Bot] ${client.steamID.getSteamID64()} accepted user ${steamID}'s friend request.`);
-                }
-            });
-            break;
-        //The bot is now friends with another Steam user
-        case 3:
-            //Invite that user to our Steam group
-            client.inviteToGroup(steamID, config.groupid);
-        
-            console.log(`[Steam Bot] ${client.steamID.getSteamID64()} invited user ${steamID} to our Steam group.`);
-            break;
-        default:
-            break;
-    }
-});
-
-
-client.on('friendMessage', function (steamID, message) {
-    console.log("Friend message from " + steamID.getSteam3RenderedID() + ": " + message);
-    if(message.toLowerCase() == "!hi")
-    {
-        client.chatMessage(steamID, "hi boi this is auto reply bot. :steamhappy:")
-    }
-    if(message.toLowerCase() == "!friends")
-    {
-        client.chatMessage(steamID, `Total Friends: ${friends.length}`)
-    }
-});
-
-async function checkVacID(removeFriend=false) {
-    console.log('Vac Remove Friend: ', removeFriend ? 'Enabled' : 'Disabled')
-    friend_list = friends;
-    vac_friends = []
-    const promises = friends.map(key => axios.get(`https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key=${config['apikey']}&steamids=${key}`))
-    try {
-
-        const res = await Promise.all(promises)
-
-        const vac_friends = res.map(r => r.data).filter(r => r.players[0]['VACBanned'] == true).map(r => r.players[0])
-
-        if(vac_friends.length > 0){
-            
-            console.log(`No. of friend found vac: ${vac_friends.length}`)
-
-            const profile = vac_friends.map((key) => axios.get(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${config['apikey']}&steamids=${key.SteamId}`))
-
-            const res_profile = await Promise.all(profile)
-
-        
-            const data = res_profile.map(r => r.data.response.players[0])
-            const merged_data = vac_friends.map(v => {
-                const d = data.find(r => r['steamid'] === v.SteamId);
-                return {...v,...d}     
-            });
-        
-            merged_data.map((key) => {
-                console.log(`SteamID: ${key.SteamId} Name: ${key.personaname} Days: ${key.DaysSinceLastBan}`)
-                if(removeFriend == true){
-                    client.removeFriend(key.SteamId);
-                    console.log(`Removed ${key.personaname} from friend list`);
-                }
-            });
-        }else{
-            console.log('Good news no vac profiles in your friend list')
-        }
-
-    } catch (error) {
-        console.log(error);
-    }
-}
-
-async function execSend(friend_mode = 3, game_id=730, mode = 2 ){
-    
     // Friend Mode:-
     // 1. all friends 
     // 2. select friends who playing game (default)
@@ -152,68 +52,282 @@ async function execSend(friend_mode = 3, game_id=730, mode = 2 ){
     // Mode:-
     // 1. Send Message
     // 2. Send Group Invite (default)
-    if(friend_mode == 1){
-        friend_list = friends;
-        console.log(`Friend Mode: All Friends`)
-    }
-    else if(friend_mode == 2)
-    {
-        console.log(`Friend Mode: Game Friends | GameID: ${game_id}`)
 
-        async function getAllFriendsGames(){
-            var game_selected_friends = [];
-            console.log(friends, game_id);
-            client.requestRichPresence(game_id, friends, function(err, response){
-                if(err)
-                    return console.log(err);
-                console.log(response)
-                game_selected_friends = Object.keys(response.users)
-            });
-            await sleep(2000);
-            console.log(game_selected_friends);
-            return game_selected_friends;
-        }
+    // execSend(friend_mode=2, game_id=730, mode=2);
+    checkVacID(removeFriend = false);
+    // run();
+});
 
-        friend_list = await getAllFriendsGames();
-    }
-    else if(friend_mode == 3)
-    {
-        friend_list = ['76561197962029809'];
+
+async function DumpFriends(friends) {
+    const chunkSize = 100;
+    let friends_details = [];
+    for (let i = 0; i < friends.length; i += chunkSize) {
+        const chunk = friends.slice(i, i + chunkSize);
+
+        const d = await axios.get(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${config['apikey']}&steamids=` + chunk)
+
+        d.data.response.players.map((x) => {
+            friends_details.push(x);
+        })
     }
 
-    const total_friends = friend_list.length
-    console.log('[Steam Bot] Selected Total Friends: ' + total_friends);
-    
+    console.log('Fetching friends data...')
 
-    if(friend_list.length > 0){
-        friend_list.forEach(function(key, index){     
-            client.getPersonas([key], function (err, data) {
-                var friend = {
-                    name: data[key].player_name ? data[key].player_name : "",
-                    id: key
-                }
-                
-                msgTxt = ad_file.replace("$name", friend.name);
-                msgTxt = msgTxt.replace("$steamid", friend.id);
+    // Store all friends details such as name , avatar
+    let filex = `${folder_data}/${client.steamID.getSteamID64()}/friends_details.json`
+    ensureDirectoryExistence(filex)
+    fs.writeFileSync(filex, JSON.stringify(friends_details, null, 4), 'utf-8');
 
-                switch(mode)
-                {
-                    case 1:
-                        setTimeout(() =>{
-                            console.log(`[Steam Bot] #${index+1}/${total_friends} Friend Name: ${friend.name} ID: ${friend.id}`)
-                            client.chatMessage(key, msgTxt);
-                        }, 2000 * (index + 1), index)
-                        break;
+    // Store friends ids 
+    let filey = `${folder_data}/${client.steamID.getSteamID64()}/friends_ids.json`
+    ensureDirectoryExistence(filey)
+    fs.writeFileSync(filey, JSON.stringify(friends, null, 4));
 
-                    case 2:
-                        console.log("[Steam Bot] Sending Group Invite")
-                        console.log(`[Steam Bot] #${index+1}/${total_friends} Friend Name: ${friend.name} ID: ${friend.id}`)
-                        client.inviteToGroup(key, config.groupid);
-                        break;
+    //Store vacban data
+    await DumpVacBans(friends);
+}
 
-                    default: break;
-                }
-            })
+function ensureDirectoryExistence(filePath) {
+    var dirname = path.dirname(filePath);
+    if (fs.existsSync(dirname)) {
+        return true;
+    }
+    ensureDirectoryExistence(dirname);
+    fs.mkdirSync(dirname);
+}
+
+// Thanks Snabe for this code.
+client.on('friendRelationship', async (steamID, relationship) => {
+    // Get Information about steamid
+    const playerinfo = await client.getPersonas([steamID]);
+    const steamid64 = steamID.getSteamID64();
+    const player_name = playerinfo.personas[steamid64].player_name;
+
+    switch (relationship) {
+        case 2:
+            console.log(`Incoming Friend Request from User ${player_name} - ${steamID}`);
+
+            try {
+                // Add incoming friend request
+                await client.addFriend(steamID)
+            }
+            catch (e) {
+                console.log(`Error adding user ${player_name}` + e);
+            }
+            break;
+
+        case 3:
+            console.log(`Accepted Incoming Friend Request Of User ${player_name} - ${steamID}`);
+
+            // Send sweet greeting message on adding
+            try {
+                await client.chat.sendFriendMessage(steamID, `Greetings ${player_name}! thanks for adding me friend :')\nHave a good day!`);
+
+                console.log('Message Sent!');
+            } catch (e) {
+                console.log('Message send failed:' + e)
+            }
+
+            //Invite that user to our Steam group
+            await client.inviteUserToGroup(config.groupid, steamID);
+            console.log(`Group Invite Sent to User ${player_name} - ${steamID}`);
+
+            break;
+        default:
+            break;
+    }
+});
+
+
+client.on('friendMessage', async function (steamID, message) {
+    console.log("Friend message from " + steamID.getSteam3RenderedID() + ": " + message);
+
+    if (message.toLowerCase().includes("!test")) {
+        await client.chat.sendFriendMessage(steamID, "Test Successful :steamhappy:")
+    }
+
+    if (message.toLowerCase() === ("!vac")) {
+        
+    }
+
+    if (message.toLowerCase() === ("!exec")) {
+        await client.chat.sendFriendMessage(steamID, `Executed...`)
+        await execSend();
+    }
+
+    if (message.toLowerCase() === ("!profile")) {
+        
+    }
+});
+
+
+async function DumpVacBans(friends) {
+    console.log('Fetching Vacbans data...');
+
+    let vac_friends = [];
+    const chunkSize = 100;
+
+    for (let i = 0; i < friends.length; i += chunkSize) {
+        const chunk = friends.slice(i, i + chunkSize);
+
+        const d = await axios.get(`https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key=${config['apikey']}&steamids=` + chunk)
+
+        d.data.players.map((x) => vac_friends.push(x));
+
+
+        let file = `${folder_data}/${client.steamID.getSteamID64()}/vacbans.json`
+        ensureDirectoryExistence(file)
+        fs.writeFileSync(file, JSON.stringify(vac_friends, null, 4), 'utf-8');
+
+        // merge both data
+
+    }
+}
+
+async function checkVacID(removeFriend = false) {
+    console.log('Vac Remove Friend: ', removeFriend ? 'Enabled' : 'Disabled')
+
+    // Merge data so we get name with userid
+    const data = fs.readFileSync(`${folder_data}/${client.steamID.getSteamID64()}/friends_details.json`, "utf-8");
+    const vacdata = fs.readFileSync(`${folder_data}/${client.steamID.getSteamID64()}/vacbans.json`, "utf-8");
+    const jsonData = JSON.parse(data);
+    const jsonVacData = JSON.parse(vacdata);
+
+    jsonVacData.map((x) => {
+        let objx = jsonData.find((o, i) => {
+            if (o.steamid === x.SteamId) {
+                jsonData[i] = { ...jsonData[i], vacbans: x };
+                return true; // stop searching
+            }
         });
+    });
+
+    let filer_vac_ids = jsonData.filter((x) => x.vacbans.VACBanned == true);
+    let filer_gamebans = jsonData.filter((x) => parseInt(x.NumberOfGameBans) > 0);
+
+    //vac banned users
+    filer_vac_ids.map((x) => {
+        try {
+            if (removeFriend === true) {
+                client.removeFriend(x.steamid)
+            }
+            console.log(`VAC BANNED: ${x.personaname} ${x.steamid}`);
+        } catch (e) {
+            console.log("Error:" + e)
+        }
+    })
+
+    //
+    //game banned users
+    filer_gamebans.map((x) => {
+        try {
+            if (removeFriend === true) {
+                client.removeFriend(x.steamid)
+            }
+            console.log(`GAME BANNED: ${x.personaname} ${x.steamid}`);
+        } catch (e) {
+            console.log("Error:" + e)
+        }
+    })
+
+}
+
+async function execSend(friend_mode = 3, game_id = 730, mode = 2) {
+
+    // Friend Mode:-
+    // 1. all friends 
+    // 2. select friends who playing game (default)
+    // 3. debug developer use only (not to be used)
+
+    // Mode:-
+    // 1. Send Message
+    // 2. Send Group Invite (default)
+    /*
+        if (friend_mode == 1) {
+            // Get all friends
+            friend_list = Object.keys(client.myFriends).filter(steamId => client.myFriends[steamId] == SteamUser.EFriendRelationship.Friend);
+    
+            console.log(`Friend Mode: All Friends`)
+        }
+        else if (friend_mode == 2) {
+            // Get friends who are playing some game
+            console.log(`Friend Mode: Game Friends | GameID: ${game_id}`)
+            console.log(friends, game_id);
+            try {
+                const response = await client.requestRichPresence(game_id, friends);
+                friend_list = Object.keys(response.users)
+            } catch (e) {
+                console.log("Error:" + e)
+            }
+        }
+        else if (friend_mode == 3) {
+            friend_list = ['76561197962029809'];
+        }
+    
+        const total_friends = friend_list.length
+        console.log('[Steam Bot] Selected Total Friends: ' + total_friends);
+    */
+    const data = fs.readFileSync(`${folder_data}/${client.steamID.getSteamID64()}/friends_details.json`, "utf-8");
+    const jsonData = JSON.parse(data);
+
+    if (!jsonData.length) {
+        return;
     }
+
+    jsonData.map(async (x, i) => {
+        const msg = fs.readFileSync('ad.txt', 'utf-8');
+
+        switch (mode) {
+            case 1: {
+                setTimeout(() => {
+                    try {
+                        var mapObj = {
+                            "{name}": x.personaname,
+                            "{steam}": x.steamid,
+                        };
+
+                        msg = msg.toString();
+                        var re = new RegExp(Object.keys(mapObj).join("|"), "gi");
+                        msg = msg.replace(re, function (matched) {
+                            return mapObj[matched];
+                        });
+
+                        console.log(`MESSAGE: #${i + 1}/${jsonData.length} ${x.personaname} ${x.steamid}`)
+
+                        await client.chatMessage(x.steamid, msg);
+                    } catch (e) {
+                        console.log("Error:" + e);
+                    }
+                }, 2000 * i + 1);
+
+                break;
+            }
+
+            case 2: {
+                setTimeout(() => {
+                    try {
+
+                        console.log(`GROUP INVITE: #${i + 1}/${jsonData.length} ${x.personaname} ${x.steamid}`)
+                        client.inviteToGroup(x.steamid, config.groupid);
+                    } catch (e) {
+                        console.log("Error:" + e);
+                    }
+                }, 1000 * i + 1);
+                break;
+            }
+            default: break;
+        }
+    });
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// To do
+// Add function to redeem list of steam game keys
+function reedeemKey(){
+    const keys = fs.readFileSync('gamekeys.txt', 'utf-8');
+    console.log(keys);
 }

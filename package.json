@@ -8,13 +8,13 @@
     "steam-user": "^4.20.2",
     "steamcommunity": "^3.43.1"
   },
-  "name": "steamauto",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "steam-bot",
+  "version": "1.9",
+  "main": "node index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "github.com/sanjaysrocks",
   "license": "ISC",
   "description": ""
 }
